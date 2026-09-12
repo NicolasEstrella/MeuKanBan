@@ -1,0 +1,85 @@
+# Nome fixo do projeto: garante reuse do volume existente meukanban_postgres-data
+# independente do nome da pasta de checkout.
+name: meukanban
+
+services:
+  postgres:
+    # Digest verificado em 2026-09-11 via `docker buildx imagetools inspect`
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    container_name: meukanban-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB ausente - copie .env.example para .env e preencha}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER ausente - copie .env.example para .env e preencha}
+      # Senha via arquivo (Docker secret): a imagem oficial suporta *_FILE e o
+      # valor nao aparece em `docker compose config` nem em `docker inspect`.
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - meukanban-net
+    healthcheck:
+      # $$ escapa a interpolacao do Compose: usa as env vars DENTRO do container
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .                      # raiz do monorepo: Api referencia Application/Domain/Infrastructure
+      dockerfile: src/Api/Dockerfile
+    image: meukanban-api:dev
+    container_name: meukanban-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Connection string SEM senha a partir das mesmas POSTGRES_* do .env: nenhum segredo no YAML
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER}"
+      # A API le a senha do arquivo montado pelo secret e compoe a string no startup
+      Postgres__PasswordFile: /run/secrets/postgres_password
+      # Origem do frontend local (browser) para CORS
+      Cors__AllowedOrigins__0: http://localhost:4200
+    secrets:
+      - postgres_password
+    ports:
+      - "8080:8080"
+    networks:
+      - meukanban-net
+    depends_on:
+      postgres:
+        condition: service_healthy    # sobe a API apenas com o banco realmente aceitando conexoes
+    # HEALTHCHECK herdado da imagem (definido no Dockerfile): testa /health/ready (processo + Postgres)
+
+  frontend:
+    build:
+      context: ./frontend/angular-app
+      dockerfile: Dockerfile
+    image: meukanban-frontend:dev
+    container_name: meukanban-frontend
+    environment:
+      # URL que o BROWSER usa (roda no host) - por isso localhost:8080, nao "api:8080"
+      API_URL: ${API_URL:-http://localhost:8080}
+    ports:
+      - "4200:8080"                   # nginx unprivileged escuta em 8080 no container
+    networks:
+      - meukanban-net
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  meukanban-net:
+    driver: bridge
+
+volumes:
+  postgres-data:                      # remocao APENAS explicita: docker compose down -v
+
+secrets:
+  postgres_password:
+    # Arquivo local NAO versionado (gitignored). `docker compose config` exibe
+    # apenas este caminho, nunca o conteudo. Crie a partir de .env.example.
+    file: ${POSTGRES_PASSWORD_FILE:-./infra/postgres/secrets/postgres_password}

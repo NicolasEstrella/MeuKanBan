@@ -1,0 +1,22 @@
+**/.git
+**/.vs
+**/.idea
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.angular
+**/coverage
+
+# Segredos locais nunca entram no contexto de build
+.env
+.env.*
+!.env.example
+
+# Fora do build da API
+frontend/
+tests/
+docs/
+infra/
+docker-compose*.yml
+*.md

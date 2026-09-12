@@ -1,0 +1,40 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+.nx/
+coverage/
+
+# Testes e ferramentas
+test-results/
+.trx
+playwright-report/
+
+# Ambiente local
+.env
+.env.*
+!.env.example
+# Conteudo de qualquer pasta de secrets locais (mantem .gitkeep versionado)
+**/secrets/*
+!**/secrets/.gitkeep
+*.pfx
+*.pem
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Docker volumes e dados locais
+postgres-data/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
