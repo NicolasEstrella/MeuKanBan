@@ -1,0 +1,24 @@
+<main class="main">
+  <h1>{{ title() }}</h1>
+  <p>Fundacao do ambiente local: frontend, API e PostgreSQL em Compose.</p>
+
+  <section aria-label="Status da API">
+    <h2>Status da API</h2>
+    <p>
+      Endpoint configurado: <code>{{ config.apiUrl }}</code>
+    </p>
+    @switch (apiStatus()) {
+      @case ('verificando') {
+        <p role="status">Verificando conectividade com a API...</p>
+      }
+      @case ('online') {
+        <p role="status">API online (health/live respondeu Healthy).</p>
+      }
+      @case ('indisponivel') {
+        <p role="alert">API indisponivel. Verifique se o ambiente Compose esta de pe.</p>
+      }
+    }
+  </section>
+</main>
+
+<router-outlet />
