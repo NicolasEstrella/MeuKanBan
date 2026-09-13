@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace MeuKanBan.Api.Tests;
 
+[Collection("WebHost")]
 public class HealthEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private const string ConnectionStringEnvVar = "ConnectionStrings__DefaultConnection";
